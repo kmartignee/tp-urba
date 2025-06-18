@@ -4,10 +4,10 @@ variable "region" {
   default     = "eu-west-3"
 }
 
-variable "vpc_cidr" {
+variable "vpc_id" {
   description = "CIDR block pour le VPC"
   type        = string
-  default     = "10.0.0.0/16"
+  default     = "vpc-0306b25c3eefbf12d"
 }
 
 variable "subnet_cidr" {
