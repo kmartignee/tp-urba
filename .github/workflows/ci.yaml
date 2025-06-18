@@ -5,49 +5,40 @@ on:
     branches: [ main ]
 
 jobs:
-  terraform:
-    name: 'Déploiement Infrastructure'
-    runs-on: ubuntu-latest
-    outputs:
-      instance_ip: ${{ steps.terraform-output.outputs.instance_ip }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Configuration AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-3
-
-      - name: Installer Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.0
-
-      - name: Initialisation Terraform
-        working-directory: ./terraform
-        run: terraform init
-
-      - name: Plan Terraform
-        working-directory: ./terraform
-        run: terraform plan
-
-      - name: Appliquer Terraform
-        working-directory: ./terraform
-        run: terraform apply -auto-approve
-
-      - name: Récupérer les outputs Terraform
-        id: terraform-output
-        working-directory: ./terraform
-        run: |
-          echo "instance_ip=$(terraform output -raw instance_public_ip)" >> $GITHUB_OUTPUT
+#  terraform:
+#    name: 'Déploiement Infrastructure'
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
+#
+#      - name: Configuration AWS
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-region: eu-west-3
+#
+#      - name: Installer Terraform
+#        uses: hashicorp/setup-terraform@v2
+#        with:
+#          terraform_version: 1.5.0
+#
+#      - name: Initialisation Terraform
+#        working-directory: ./terraform
+#        run: terraform init
+#
+#      - name: Plan Terraform
+#        working-directory: ./terraform
+#        run: terraform plan
+#
+#      - name: Appliquer Terraform
+#        working-directory: ./terraform
+#        run: terraform apply -auto-approve
 
   ansible:
     name: 'Configuration Serveur'
-    needs: terraform
     runs-on: ubuntu-latest
 
     steps:
