@@ -31,7 +31,7 @@ variable "instance_type" {
 variable "ami_id" {
   description = "ID de l'AMI pour l'instance EC2"
   type        = string
-  default     = "ami-0be0c2d46fff7d3b1"
+  default     = "ami-04ec97dc75ac850b1"
 }
 
 variable "ssh_key_name" {
