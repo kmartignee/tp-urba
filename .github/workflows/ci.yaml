@@ -30,7 +30,7 @@ jobs:
       - name: Créer la clé SSH pour Terraform
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY_CI }}" > ~/.ssh/ma-cle-ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/ma-cle-ssh
           chmod 600 ~/.ssh/ma-cle-ssh
           ssh-keygen -y -f ~/.ssh/ma-cle-ssh > ~/.ssh/ma-cle-ssh.pub || true
 
