@@ -36,7 +36,8 @@ jobs:
 
       - name: Importer la clé SSH dans AWS
         run: |
-          aws ec2 import-key-pair --key-name ma-cle-ssh --public-key-material file://~/.ssh/ma-cle-ssh.pub || true
+          PUBLIC_KEY=$(cat ~/.ssh/ma-cle-ssh.pub)
+          aws ec2 import-key-pair --key-name ma-cle-ssh --public-key-material "$(echo $PUBLIC_KEY | base64 -w 0)" || true
 
       - name: Initialisation Terraform
         working-directory: ./terraform
