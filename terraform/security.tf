@@ -1,7 +1,7 @@
 resource "aws_security_group" "nginx_sg" {
   name        = "nginx-sg"
   description = "Autoriser HTTP, HTTPS et SSH"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = var.vpc_id
 
   ingress {
     from_port   = 80
