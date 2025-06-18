@@ -1,65 +1,87 @@
-# .github/workflows/ci.yml
-name: '🚀 - Deploy TP Urba Infrastructure'
+name: Infrastructure et Configuration
 
 on:
   push:
-    branches:
-      - main
-      - 'main/*'
+    branches: [ main ]
 
 jobs:
-  deploy:
+  terraform:
+    name: 'Déploiement Infrastructure'
     runs-on: ubuntu-latest
+    outputs:
+      instance_ip: ${{ steps.terraform-output.outputs.instance_ip }}
+    
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
+      - name: Configuration AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-3
 
-      - name: Setup Terraform
+      - name: Installer Terraform
         uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
 
-      - name: Terraform Init
-        working-directory: terraform
+      - name: Créer la clé SSH pour Terraform
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/ma-cle-ssh
+          chmod 600 ~/.ssh/ma-cle-ssh
+          ssh-keygen -y -f ~/.ssh/ma-cle-ssh > ~/.ssh/ma-cle-ssh.pub
+
+      - name: Importer la clé SSH dans AWS
+        run: |
+          aws ec2 import-key-pair --key-name ma-cle-ssh --public-key-material fileb://~/.ssh/ma-cle-ssh.pub || true
+
+      - name: Initialisation Terraform
+        working-directory: ./terraform
         run: terraform init
 
-      - name: Terraform Plan
-        working-directory: terraform
+      - name: Plan Terraform
+        working-directory: ./terraform
         run: terraform plan
 
-      - name: Terraform Apply
-        working-directory: terraform
+      - name: Appliquer Terraform
+        working-directory: ./terraform
         run: terraform apply -auto-approve
 
-      - name: Extract Terraform Outputs
-        working-directory: terraform
+      - name: Récupérer les outputs Terraform
+        id: terraform-output
+        working-directory: ./terraform
         run: |
-          echo "$(terraform output -json)" > terraform-outputs.json
+          echo "instance_ip=$(terraform output -raw instance_public_ip)" >> $GITHUB_OUTPUT
 
-      - name: Setup Ansible
-        working-directory: ansible
+  ansible:
+    name: 'Configuration Serveur'
+    needs: terraform
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Installer Ansible
         run: |
           sudo apt update
           sudo apt install -y ansible
 
-      - name: Create Ansible Inventory
-        working-directory: ansible
+      - name: Configurer la clé SSH
         run: |
-          echo "[nginx]" > inventory.ini
-          jq -r '.instance_ips.value[]' terraform-outputs.json >> inventory.ini
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/ma-cle-ssh
+          chmod 600 ~/.ssh/ma-cle-ssh
+          echo -e "Host *\n  StrictHostKeyChecking no\n" > ~/.ssh/config
 
-      - name: Deploy NGINX with Ansible
-        working-directory: ansible
+      - name: Créer l'inventaire Ansible
         run: |
-          ansible-playbook -i inventory.ini playbooks/nginx.yml
+          echo "[nginx]" > ./ansible/inventory.ini
+          echo "${{ needs.terraform.outputs.instance_ip }} ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/ma-cle-ssh" >> ./ansible/inventory.ini
 
-      - name: Verify NGINX Deployment
-        run: |
-          for ip in $(jq -r '.instance_ips.value[]' terraform-outputs.json); do
-            curl -s --head http://$ip | grep "Server: nginx" || exit 1
-          done
+      - name: Exécuter Ansible
+        working-directory: ./ansible
+        run: ansible-playbook -i inventory.ini nginx_playbook.yml
