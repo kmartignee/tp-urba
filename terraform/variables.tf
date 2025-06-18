@@ -33,9 +33,3 @@ variable "ami_id" {
   type        = string
   default     = "ami-04ec97dc75ac850b1"
 }
-
-variable "nginx_name" {
-    description = "Nom de l'instance Nginx"
-    type        = string
-    default     = "nginx-server"
-}
