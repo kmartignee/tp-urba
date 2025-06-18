@@ -13,7 +13,7 @@ variable "vpc_id" {
 variable "subnet_cidr" {
   description = "CIDR block pour le subnet public"
   type        = string
-  default     = "10.0.1.0/24"
+  default     = "172.31.48.0/20"
 }
 
 variable "availability_zone" {
