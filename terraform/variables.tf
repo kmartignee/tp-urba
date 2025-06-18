@@ -5,7 +5,7 @@ variable "region" {
 }
 
 variable "vpc_id" {
-  description = "CIDR block pour le VPC"
+  description = "ID du VPC existant"
   type        = string
   default     = "vpc-0306b25c3eefbf12d"
 }
