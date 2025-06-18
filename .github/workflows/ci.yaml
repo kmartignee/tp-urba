@@ -34,23 +34,27 @@ jobs:
 
       - name: Terraform Apply
         working-directory: terraform
-        run: terraform apply -auto-approve
+        run: terraform apply
 
       - name: Extract Terraform Outputs
+        working-directory: terraform
         run: |
           echo "$(terraform output -json)" > terraform-outputs.json
 
       - name: Setup Ansible
+        working-directory: ansible
         run: |
           sudo apt update
           sudo apt install -y ansible
 
       - name: Create Ansible Inventory
+        working-directory: ansible
         run: |
           echo "[nginx]" > inventory.ini
           jq -r '.instance_ips.value[]' terraform-outputs.json >> inventory.ini
 
       - name: Deploy NGINX with Ansible
+        working-directory: ansible
         run: |
           ansible-playbook -i inventory.ini playbooks/nginx.yml
 
