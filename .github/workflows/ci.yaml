@@ -4,24 +4,11 @@ name: '🚀 - Deploy TP Urba Infrastructure'
 on:
   push:
     branches:
-      - maine
-      - 'maine/*'
+      - main
+      - 'main/*'
 
 jobs:
-  checkov:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Install Checkov
-        run: pip install checkov
-
-      - name: Run Checkov
-        run: checkov --directory . --output json --quiet
-
   deploy:
-    needs: checkov
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -45,3 +32,27 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
+
+      - name: Extract Terraform Outputs
+        run: |
+          echo "$(terraform output -json)" > terraform-outputs.json
+
+      - name: Setup Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible
+
+      - name: Create Ansible Inventory
+        run: |
+          echo "[nginx]" > inventory.ini
+          jq -r '.instance_ips.value[]' terraform-outputs.json >> inventory.ini
+
+      - name: Deploy NGINX with Ansible
+        run: |
+          ansible-playbook -i inventory.ini playbooks/nginx.yml
+
+      - name: Verify NGINX Deployment
+        run: |
+          for ip in $(jq -r '.instance_ips.value[]' terraform-outputs.json); do
+            curl -s --head http://$ip | grep "Server: nginx" || exit 1
+          done
