@@ -53,14 +53,6 @@ jobs:
         working-directory: ./terraform
         run: terraform apply -auto-approve -var="db_root_password=${{ secrets.DB_ROOT_PASSWORD }}" -var="db_password=${{ secrets.DB_PASSWORD }}"
 
-      - name: Récupérer les outputs Terraform
-        id: terraform-output
-        working-directory: ./terraform
-        run: |
-          echo "frontend_ip=$(terraform output -raw frontend_public_ip)" >> $GITHUB_OUTPUT
-          echo "backend_ip=$(terraform output -raw backend_private_ip)" >> $GITHUB_OUTPUT
-          echo "database_ip=$(terraform output -raw database_private_ip)" >> $GITHUB_OUTPUT
-
   ansible:
     name: 'Configuration Serveur'
     needs: terraform
