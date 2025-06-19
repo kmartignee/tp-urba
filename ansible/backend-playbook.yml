@@ -1,0 +1,49 @@
+---
+- name: Configuration du serveur backend
+  hosts: backend
+  become: yes
+  
+  tasks:
+    - name: Mise à jour des paquets
+      apt:
+        update_cache: yes
+        upgrade: yes
+      
+    - name: Installation des dépendances
+      apt:
+        name:
+          - openjdk-11-jdk
+          - maven
+        state: present
+
+    - name: Création du répertoire d'application
+      file:
+        path: /opt/app
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Déploiement de l'application backend
+      copy:
+        src: files/backend-app.jar
+        dest: /opt/app/backend-app.jar
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Création du service systemd
+      template:
+        src: templates/backend.service.j2
+        dest: /etc/systemd/system/backend.service
+      notify: Reload systemd
+
+    - name: Démarrage et activation du service backend
+      service:
+        name: backend
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes

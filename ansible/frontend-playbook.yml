@@ -1,0 +1,33 @@
+---
+- name: Configuration du serveur frontend
+  hosts: frontend
+  become: yes
+  
+  tasks:
+    - name: Mise à jour des paquets
+      apt:
+        update_cache: yes
+        upgrade: yes
+      
+    - name: Installation de NGINX
+      apt:
+        name: nginx
+        state: present
+
+    - name: Démarrage et activation du service NGINX
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Configuration du frontend
+      template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/sites-available/default
+      notify: Reload NGINX
+
+  handlers:
+    - name: Reload NGINX
+      service:
+        name: nginx
+        state: reloaded

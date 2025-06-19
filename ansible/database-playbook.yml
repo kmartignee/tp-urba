@@ -1,0 +1,60 @@
+---
+- name: Configuration du serveur de base de données
+  hosts: database
+  become: yes
+  
+  tasks:
+    - name: Mise à jour des paquets
+      apt:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Installation de MySQL
+      apt:
+        name:
+          - mysql-server
+          - python3-pymysql
+        state: present
+
+    - name: Démarrage et activation du service MySQL
+      service:
+        name: mysql
+        state: started
+        enabled: yes
+
+    - name: Mise à jour du mot de passe root
+      mysql_user:
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        name: root
+        password: "{{ db_root_password }}"
+        host: localhost
+
+    - name: Création de la base de données
+      mysql_db:
+        login_user: root
+        login_password: "{{ db_root_password }}"
+        name: "{{ db_name }}"
+        state: present
+
+    - name: Création de l'utilisateur de la base de données
+      mysql_user:
+        login_user: root
+        login_password: "{{ db_root_password }}"
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        priv: "{{ db_name }}.*:ALL"
+        host: '%'
+        state: present
+
+    - name: Configuration de MySQL pour accepter les connexions distantes
+      lineinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        regexp: '^bind-address'
+        line: 'bind-address = 0.0.0.0'
+      notify: Restart MySQL
+
+  handlers:
+    - name: Restart MySQL
+      service:
+        name: mysql
+        state: restarted

@@ -33,3 +33,27 @@ variable "ami_id" {
   type        = string
   default     = "ami-04ec97dc75ac850b1"
 }
+
+variable "ma_cle_ssh" {
+  description = "Nom de la clé SSH pour accéder aux instances"
+  type        = string
+  default     = "ma-cle-ssh"
+}
+
+variable "instance_type_db" {
+  description = "Type d'instance pour la base de données"
+  type        = string
+  default     = "t2.micro"
+}
+
+variable "db_username" {
+  description = "Nom d'utilisateur pour la base de données"
+  type        = string
+  default     = "admin"
+}
+
+variable "db_password" {
+  description = "Mot de passe pour la base de données"
+  type        = string
+  sensitive   = true
+}
