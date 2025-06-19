@@ -8,6 +8,10 @@ jobs:
   terraform:
     name: 'Déploiement Infrastructure'
     runs-on: ubuntu-latest
+    outputs:
+      frontend_ip: ${{ steps.terraform-output.outputs.frontend_ip }}
+      backend_ip: ${{ steps.terraform-output.outputs.backend_ip }}
+      database_ip: ${{ steps.terraform-output.outputs.database_ip }}
 
     steps:
       - name: Checkout
@@ -25,14 +29,86 @@ jobs:
         with:
           terraform_version: 1.5.0
 
+      - name: Créer la clé SSH pour Terraform
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY_CI }}" > ~/.ssh/ma-cle-ssh
+          chmod 600 ~/.ssh/ma-cle-ssh
+          ssh-keygen -y -f ~/.ssh/ma-cle-ssh > ~/.ssh/ma-cle-ssh.pub || true
+
+      - name: Importer la clé SSH dans AWS
+        run: |
+          PUBLIC_KEY=$(cat ~/.ssh/ma-cle-ssh.pub)
+          aws ec2 import-key-pair --key-name ma-cle-ssh --public-key-material "$(echo $PUBLIC_KEY | base64 -w 0)" || true
+
       - name: Initialisation Terraform
         working-directory: ./terraform
         run: terraform init
 
       - name: Plan Terraform
         working-directory: ./terraform
-        run: terraform plan
+        run: terraform plan -var="db_root_password=${{ secrets.DB_ROOT_PASSWORD }}" -var="db_password=${{ secrets.DB_PASSWORD }}"
 
       - name: Appliquer Terraform
         working-directory: ./terraform
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var="db_root_password=${{ secrets.DB_ROOT_PASSWORD }}" -var="db_password=${{ secrets.DB_PASSWORD }}"
+
+      - name: Récupérer les outputs Terraform
+        id: terraform-output
+        working-directory: ./terraform
+        run: |
+          echo "frontend_ip=$(terraform output -raw frontend_public_ip)" >> $GITHUB_OUTPUT
+          echo "backend_ip=$(terraform output -raw backend_private_ip)" >> $GITHUB_OUTPUT
+          echo "database_ip=$(terraform output -raw database_private_ip)" >> $GITHUB_OUTPUT
+
+  ansible:
+    name: 'Configuration Serveur'
+    needs: terraform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Installer Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible
+
+      - name: Configurer la clé SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY_CI }}" > ~/.ssh/ma-cle-ssh
+          chmod 600 ~/.ssh/ma-cle-ssh
+          echo -e "Host *\n  StrictHostKeyChecking no\n" > ~/.ssh/config
+
+      - name: Créer l'inventaire Ansible dynamique
+        run: |
+          cat > ./ansible/inventory.ini << EOF
+          [frontend]
+          ${{ needs.terraform.outputs.frontend_ip }} ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/ma-cle-ssh
+
+          [backend]
+          ${{ needs.terraform.outputs.backend_ip }} ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/ma-cle-ssh
+
+          [database]
+          ${{ needs.terraform.outputs.database_ip }} ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/ma-cle-ssh
+
+          [all:vars]
+          db_name=appdb
+          db_user=appuser
+          db_password=${{ secrets.DB_PASSWORD }}
+          db_root_password=${{ secrets.DB_ROOT_PASSWORD }}
+          EOF
+
+      - name: Exécuter le playbook pour le frontend
+        working-directory: ./ansible
+        run: ansible-playbook -i inventory.ini frontend-playbook.yml
+
+      - name: Exécuter le playbook pour le backend
+        working-directory: ./ansible
+        run: ansible-playbook -i inventory.ini backend-playbook.yml
+
+      - name: Exécuter le playbook pour la base de données
+        working-directory: ./ansible
+        run: ansible-playbook -i inventory.ini database-playbook.yml

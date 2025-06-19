@@ -10,12 +10,6 @@ variable "vpc_id" {
   default     = "vpc-0306b25c3eefbf12d"
 }
 
-variable "subnet_cidr" {
-  description = "CIDR block pour le subnet public"
-  type        = string
-  default     = "172.31.96.0/20"
-}
-
 variable "availability_zone" {
   description = "Zone de disponibilité pour le subnet"
   type        = string
@@ -46,14 +40,26 @@ variable "instance_type_db" {
   default     = "t2.micro"
 }
 
-variable "db_username" {
+variable "db_root_password" {
+  description = "Mot de passe root pour la base de données"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_user" {
   description = "Nom d'utilisateur pour la base de données"
   type        = string
-  default     = "admin"
+  default     = "appuser"
 }
 
 variable "db_password" {
-  description = "Mot de passe pour la base de données"
+  description = "Mot de passe pour l'utilisateur de la base de données"
   type        = string
   sensitive   = true
+}
+
+variable "db_name" {
+  description = "Nom de la base de données"
+  type        = string
+  default     = "appdb"
 }
