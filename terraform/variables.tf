@@ -39,3 +39,27 @@ variable "instance_type_db" {
   type        = string
   default     = "t2.micro"
 }
+
+variable "db_root_password" {
+  description = "Mot de passe root pour la base de données"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_user" {
+  description = "Nom d'utilisateur pour la base de données"
+  type        = string
+  default     = "appuser"
+}
+
+variable "db_password" {
+  description = "Mot de passe pour l'utilisateur de la base de données"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_name" {
+  description = "Nom de la base de données"
+  type        = string
+  default     = "appdb"
+}
