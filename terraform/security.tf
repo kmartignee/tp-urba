@@ -9,7 +9,7 @@ resource "aws_security_group" "app_sg" {
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "Accès HTTP"
+    description = "Acces HTTP"
   }
 
   # Autoriser le trafic HTTPS entrant
@@ -18,7 +18,7 @@ resource "aws_security_group" "app_sg" {
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "Accès HTTPS"
+    description = "Acces HTTPS"
   }
 
   # Autoriser SSH pour l'administration (restreindre dans un environnement de production)
@@ -27,7 +27,7 @@ resource "aws_security_group" "app_sg" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "Accès SSH"
+    description = "Acces SSH"
   }
 
   # Autoriser le trafic Node.js backend (si besoin d'un accès direct)
@@ -64,7 +64,7 @@ resource "aws_security_group" "database_sg" {
     to_port         = 3306
     protocol        = "tcp"
     security_groups = [aws_security_group.app_sg.id]
-    description     = "Accès base de données depuis l application"
+    description     = "Acces base de donnees depuis l application"
   }
 
   # Autoriser SSH pour l'administration (idéalement à restreindre davantage)
@@ -73,7 +73,7 @@ resource "aws_security_group" "database_sg" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "Accès SSH"
+    description = "Acces SSH"
   }
 
   # Permettre tout le trafic sortant
