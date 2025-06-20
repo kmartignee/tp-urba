@@ -7,7 +7,6 @@ resource "aws_vpc" "main" {
     Name = "vpc-architecture-3-tiers"
   }
 }
-
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"

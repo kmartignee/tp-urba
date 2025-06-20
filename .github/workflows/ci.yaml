@@ -1,12 +1,29 @@
-name: Infrastructure et Configuration
+name: 'TP Urba SI'
 
 on:
   push:
     branches: [ main ]
 
 jobs:
+  checkov:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Checkov
+        run: pip install checkov
+
+      - name: Run Checkov on Terraform code
+        working-directory: ./terraform
+        run: checkov
+  
   terraform:
-    name: 'Déploiement Infrastructure'
     runs-on: ubuntu-latest
     outputs:
       frontend_ip: ${{ steps.terraform-output.outputs.frontend_ip }}
@@ -28,19 +45,7 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.0
-
-      - name: Créer la clé SSH pour Terraform
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY_CI }}" > ~/.ssh/ma-cle-ssh
-          chmod 600 ~/.ssh/ma-cle-ssh
-          ssh-keygen -y -f ~/.ssh/ma-cle-ssh > ~/.ssh/ma-cle-ssh.pub || true
-
-      - name: Importer la clé SSH dans AWS
-        run: |
-          PUBLIC_KEY=$(cat ~/.ssh/ma-cle-ssh.pub)
-          aws ec2 import-key-pair --key-name ma-cle-ssh --public-key-material "$(echo $PUBLIC_KEY | base64 -w 0)" || true
-
+            
       - name: Initialisation Terraform
         working-directory: ./terraform
         run: terraform init
@@ -54,7 +59,6 @@ jobs:
         run: terraform apply -auto-approve -var="db_root_password=${{ secrets.DB_ROOT_PASSWORD }}" -var="db_password=${{ secrets.DB_PASSWORD }}"
 
   ansible:
-    name: 'Configuration Serveur'
     needs: terraform
     runs-on: ubuntu-latest
 
