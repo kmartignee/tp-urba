@@ -26,11 +26,6 @@ jobs:
   terraform:
     needs: checkov
     runs-on: ubuntu-latest
-    
-    outputs:
-      frontend_ip: ${{ steps.terraform-output.outputs.frontend_ip }}
-      backend_ip: ${{ steps.terraform-output.outputs.backend_ip }}
-      database_ip: ${{ steps.terraform-output.outputs.database_ip }}
 
     steps:
       - name: Checkout
@@ -47,10 +42,46 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.0
-            
+
       - name: Initialisation Terraform
         working-directory: ./terraform
         run: terraform init
+        
+      - name: Get front instance IP
+        id: get_front_ip
+        run: |
+          IP_FRONT=$(terraform -chdir=./terraform output -raw front_ip)
+          echo "$IP_FRONT" > front_ip.txt
+
+      - name: Upload front instance IP
+        uses: actions/upload-artifact@v4
+        with:
+          name: front_ip
+          path: front_ip.txt
+
+      - name: Get back instance IP
+        id: get_back_ip
+        run: |
+          IP_BACK=$(terraform -chdir=./terraform output -raw back_ip)
+          echo "$IP_BACK" > back_ip.txt
+
+      - name: Upload back instance IP
+        uses: actions/upload-artifact@v4
+        with:
+          name: back_ip
+          path: back_ip.txt
+          
+      - name: Get database instance IP
+        id: get_database_ip
+        run: |
+          IP_DATABASE=$(terraform -chdir=./terraform output -raw database_ip)
+          echo "$IP_DATABASE" > database_ip.txt
+
+      - name: Upload database instance IP
+        uses: actions/upload-artifact@v4
+        with:
+          name: database_ip
+          path: database_ip.txt    
 
       - name: Plan Terraform
         working-directory: ./terraform
@@ -59,54 +90,3 @@ jobs:
       - name: Appliquer Terraform
         working-directory: ./terraform
         run: terraform apply -auto-approve
-
-  ansible:
-    needs: terraform
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Installer Ansible
-        run: |
-          sudo apt update
-          sudo apt install -y ansible
-
-      - name: Configurer la clé SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY_CI }}" > ~/.ssh/ma-cle-ssh
-          chmod 600 ~/.ssh/ma-cle-ssh
-          echo -e "Host *\n  StrictHostKeyChecking no\n" > ~/.ssh/config
-
-      - name: Créer l'inventaire Ansible dynamique
-        run: |
-          cat > ./ansible/inventory.ini << EOF
-          [frontend]
-          ${{ needs.terraform.outputs.frontend_ip }} ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/ma-cle-ssh
-
-          [backend]
-          ${{ needs.terraform.outputs.backend_ip }} ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/ma-cle-ssh
-
-          [database]
-          ${{ needs.terraform.outputs.database_ip }} ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/ma-cle-ssh
-
-          [all:vars]
-          db_name=appdb
-          db_user=appuser
-          db_password=${{ secrets.DB_PASSWORD }}
-          db_root_password=${{ secrets.DB_ROOT_PASSWORD }}
-          EOF
-
-      - name: Exécuter le playbook pour le frontend
-        working-directory: ./ansible
-        run: ansible-playbook -i inventory.ini frontend-playbook.yml
-
-      - name: Exécuter le playbook pour le backend
-        working-directory: ./ansible
-        run: ansible-playbook -i inventory.ini backend-playbook.yml
-
-      - name: Exécuter le playbook pour la base de données
-        working-directory: ./ansible
-        run: ansible-playbook -i inventory.ini database-playbook.yml

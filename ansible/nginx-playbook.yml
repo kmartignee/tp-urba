@@ -1,6 +1,6 @@
 ---
-- name: Configuration du serveur frontend
-  hosts: frontend
+- name: Configuration du serveur nginx
+  hosts: all
   become: yes
   
   tasks:
@@ -19,11 +19,22 @@
         name: nginx
         state: started
         enabled: yes
+        
+    - name: Installer Node.js et npm
+      apt:
+        name:
+          - nodejs
+          - npm
+        state: present
+        update_cache: yes    
 
-    - name: Configuration du frontend
-      template:
-        src: templates/nginx.conf.j2
-        dest: /etc/nginx/sites-available/default
+    - name: Copie du frontend
+      copy:
+        src: ../front/
+        dest: /var/www/html/
+        owner: www-data
+        group: www-data
+        mode: "0755"
       notify: Reload NGINX
 
   handlers:
