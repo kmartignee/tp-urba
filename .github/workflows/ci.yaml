@@ -5,8 +5,100 @@ on:
     branches: [ main ]
 
 jobs:
-  checkov:
+#  checkov:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v4
+#
+#      - name: Set up Python
+#        uses: actions/setup-python@v5
+#        with:
+#          python-version: "3.11"
+#
+#      - name: Install Checkov
+#        run: pip install checkov
+#
+#      - name: Run Checkov on Terraform code
+#        working-directory: ./terraform
+#        run: checkov -d . --config-file .checkov.yml
+#  
+#  terraform:
+#    needs: checkov
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
+#
+#      - name: Configuration AWS
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-region: eu-west-3
+#
+#      - name: Installer Terraform
+#        uses: hashicorp/setup-terraform@v2
+#        with:
+#          terraform_version: 1.5.0
+#
+#      - name: Initialisation Terraform
+#        working-directory: ./terraform
+#        run: terraform init
+#        
+#      - name: Get front instance IP
+#        id: get_front_ip
+#        run: |
+#          IP_FRONT=$(terraform -chdir=./terraform output -raw front_ip)
+#          echo "$IP_FRONT" > front_ip.txt
+#
+#      - name: Upload front instance IP
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: front_ip
+#          path: front_ip.txt
+#
+#      - name: Get back instance IP
+#        id: get_back_ip
+#        run: |
+#          IP_BACK=$(terraform -chdir=./terraform output -raw back_ip)
+#          echo "$IP_BACK" > back_ip.txt
+#
+#      - name: Upload back instance IP
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: back_ip
+#          path: back_ip.txt
+#          
+#      - name: Get database instance IP
+#        id: get_database_ip
+#        run: |
+#          IP_DATABASE=$(terraform -chdir=./terraform output -raw database_ip)
+#          echo "$IP_DATABASE" > database_ip.txt
+#
+#      - name: Upload database instance IP
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: database_ip
+#          path: database_ip.txt    
+#
+#      - name: Plan Terraform
+#        working-directory: ./terraform
+#        run: terraform plan
+#
+#      - name: Appliquer Terraform
+#        working-directory: ./terraform
+#        run: terraform apply -auto-approve
+
+  ansible-nginx:
     runs-on: ubuntu-latest
+    
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: eu-west-3
+  
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -16,77 +108,51 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Checkov
-        run: pip install checkov
+      - name: Install Ansible
+        run: pip install ansible
 
-      - name: Run Checkov on Terraform code
-        working-directory: ./terraform
-        run: checkov -d . --config-file .checkov.yml
-  
-  terraform:
-    needs: checkov
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Configuration AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-3
-
-      - name: Installer Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.0
-
-      - name: Initialisation Terraform
-        working-directory: ./terraform
-        run: terraform init
-        
-      - name: Get front instance IP
-        id: get_front_ip
+      - name: Set up SSH key
         run: |
-          IP_FRONT=$(terraform -chdir=./terraform output -raw front_ip)
-          echo "$IP_FRONT" > front_ip.txt
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY_CI }}" > ~/.ssh/ma-cle-ssh.pem
+          chmod 400 ~/.ssh/ma-cle-ssh.pem
 
-      - name: Upload front instance IP
-        uses: actions/upload-artifact@v4
+      - name: Download front IP
+        uses: actions/download-artifact@v4
         with:
           name: front_ip
-          path: front_ip.txt
 
-      - name: Get back instance IP
-        id: get_back_ip
+      - name: Read instance IP
+        id: read_ip
         run: |
-          IP_BACK=$(terraform -chdir=./terraform output -raw back_ip)
-          echo "$IP_BACK" > back_ip.txt
+          FRONT_IP=$(cat front_ip.txt)
+          echo "FRONT_IP=$FRONT_IP" >> $GITHUB_ENV
 
-      - name: Upload back instance IP
-        uses: actions/upload-artifact@v4
-        with:
-          name: back_ip
-          path: back_ip.txt
+      - name: Add instance to known_hosts
+        run: |
+          ssh-keygen -R $FRONT_IP || true
+          until ssh-keyscan -H $FRONT_IP >> ~/.ssh/known_hosts 2>/dev/null; do
+            echo "Wait..."
+            sleep 2
+          done
+
+      - name: Create Ansible inventory
+        run: |
+          echo "$FRONT_IP ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/ma-cle-ssh.pem" > hosts
+
+      - name: Copy front files to instance
+        run: |
+          rsync -avz -e "ssh -i ~/.ssh/ma-cle-ssh.pem -o StrictHostKeyChecking=no" ./front/ ubuntu@$FRONT_IP:/home/ubuntu/front/
           
-      - name: Get database instance IP
-        id: get_database_ip
-        run: |
-          IP_DATABASE=$(terraform -chdir=./terraform output -raw database_ip)
-          echo "$IP_DATABASE" > database_ip.txt
-
-      - name: Upload database instance IP
-        uses: actions/upload-artifact@v4
+      - name: Download private instance IP
+        uses: actions/download-artifact@v4
         with:
-          name: database_ip
-          path: database_ip.txt    
+          name: instance_ip_private
 
-      - name: Plan Terraform
-        working-directory: ./terraform
-        run: terraform plan
+      - name: Export INSTANCE_IP_PRIVATE
+        run: |
+          export INSTANCE_IP_PRIVATE=$(cat instance_ip_private.txt)
+          echo "INSTANCE_IP_PRIVATE=$INSTANCE_IP_PRIVATE" >> $GITHUB_ENV
 
-      - name: Appliquer Terraform
-        working-directory: ./terraform
-        run: terraform apply -auto-approve
+      - name: Run Ansible playbook
+        run: ansible-playbook -i hosts ./ansible/front-playbook.yml
