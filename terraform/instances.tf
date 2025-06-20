@@ -4,6 +4,10 @@ resource "aws_instance" "frontend" {
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.frontend_sg.id]
   key_name               = var.ma_cle_ssh
+  metadata_options {
+    http_tokens = "required"
+    http_endpoint = "enabled"
+  }
 
   tags = {
     Name = "frontend-server"
@@ -17,6 +21,9 @@ resource "aws_instance" "backend" {
   subnet_id              = aws_subnet.private.id
   vpc_security_group_ids = [aws_security_group.backend_sg.id]
   key_name               = var.ma_cle_ssh
+  metadata_options {
+    http_endpoint = "enabled"
+  }
 
   tags = {
     Name = "backend-server"
