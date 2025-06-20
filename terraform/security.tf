@@ -36,7 +36,7 @@ resource "aws_security_group" "app_sg" {
     to_port     = 3000
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "API Node.js"
+    description = "API Node js"
   }
 
   # Permettre tout le trafic sortant
@@ -64,7 +64,7 @@ resource "aws_security_group" "database_sg" {
     to_port         = 3306
     protocol        = "tcp"
     security_groups = [aws_security_group.app_sg.id]
-    description     = "Accès base de données depuis l'application"
+    description     = "Accès base de données depuis l application"
   }
 
   # Autoriser SSH pour l'administration (idéalement à restreindre davantage)
