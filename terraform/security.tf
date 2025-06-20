@@ -1,106 +1,93 @@
-resource "aws_security_group" "frontend_sg" {
-  name        = "frontend-sg"
+# Groupe de sécurité pour l'instance Nginx (front + back)
+resource "aws_security_group" "app_sg" {
+  name        = "app-security-group"
+  description = "Groupe de sécurité pour le serveur Nginx (front + back)"
   vpc_id      = aws_vpc.main.id
 
+  # Autoriser le trafic HTTP entrant
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTP"
+    description = "Accès HTTP"
   }
 
+  # Autoriser le trafic HTTPS entrant
   ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTPS"
+    description = "Accès HTTPS"
   }
 
+  # Autoriser SSH pour l'administration (restreindre dans un environnement de production)
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "SSH"
+    description = "Accès SSH"
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound traffic"
-  }
-
-  tags = {
-    Name = "frontend-sg"
-  }
-}
-
-resource "aws_security_group" "backend_sg" {
-  name        = "backend-sg"
-  vpc_id      = aws_vpc.main.id
-
+  # Autoriser le trafic Node.js backend (si besoin d'un accès direct)
   ingress {
-    from_port       = 8080
-    to_port         = 8080
-    protocol        = "tcp"
-    security_groups = [aws_security_group.frontend_sg.id]
-    description     = "API Access from Frontend"
-  }
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
+    from_port   = 3000
+    to_port     = 3000
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "SSH"
+    description = "API Node.js"
   }
 
+  # Permettre tout le trafic sortant
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound traffic"
+    description = "Tout le trafic sortant"
   }
 
   tags = {
-    Name = "backend-sg"
+    Name = "app-security-group"
   }
 }
 
+# Groupe de sécurité pour la base de données
 resource "aws_security_group" "database_sg" {
-  name        = "database-sg"
+  name        = "database-security-group"
+  description = "Groupe de sécurité pour le serveur de base de données"
   vpc_id      = aws_vpc.main.id
 
+  # Autoriser le trafic MySQL/PostgreSQL uniquement depuis le serveur d'application
   ingress {
-    from_port       = 3306
+    from_port       = 3306 # MySQL (remplacer par 5432 pour PostgreSQL si nécessaire)
     to_port         = 3306
     protocol        = "tcp"
-    security_groups = [aws_security_group.backend_sg.id]
-    description     = "MySQL from Backend"
+    security_groups = [aws_security_group.app_sg.id]
+    description     = "Accès base de données depuis l'application"
   }
 
+  # Autoriser SSH pour l'administration (idéalement à restreindre davantage)
   ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.backend_sg.id]
-    description     = "PostgreSQL from Backend"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Accès SSH"
   }
 
+  # Permettre tout le trafic sortant
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound traffic"
+    description = "Tout le trafic sortant"
   }
 
   tags = {
-    Name = "database-sg"
+    Name = "database-security-group"
   }
 }

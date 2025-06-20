@@ -1,0 +1,89 @@
+---
+- name: Configuration du serveur Nginx avec frontend et backend
+  hosts: all
+  become: yes
+  
+  tasks:
+    - name: Mise à jour des packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Installation de Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Installation de Node.js et npm
+      apt:
+        name:
+          - nodejs
+          - npm
+        state: present
+
+    - name: Création du répertoire pour le frontend
+      file:
+        path: /var/www/html
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    - name: Copie des fichiers frontend
+      copy:
+        src: /home/ubuntu/front/
+        dest: /var/www/html/
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    - name: Création du répertoire pour le backend
+      file:
+        path: /opt/backend
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Copie des fichiers backend
+      copy:
+        src: /home/ubuntu/back/
+        dest: /opt/backend/
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    - name: Installation des dépendances du backend
+      npm:
+        path: /opt/backend
+        state: present
+
+    - name: Configuration Nginx pour le frontend et le backend
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload Nginx
+
+    - name: Configuration du service backend
+      template:
+        src: backend.service.j2
+        dest: /etc/systemd/system/backend.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Démarrage et activation du service backend
+      systemd:
+        name: backend.service
+        state: started
+        enabled: yes
+        daemon_reload: yes
+  
+  handlers:
+    - name: Reload Nginx
+      service:
+        name: nginx
+        state: reloaded
