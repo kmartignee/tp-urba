@@ -58,7 +58,7 @@ jobs:
         working-directory: ./terraform
         run: terraform apply -auto-approve
   
-  build-frontend:
+  ansible:
       runs-on: ubuntu-latest
       needs: terraform
 
