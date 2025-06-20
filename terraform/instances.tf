@@ -38,7 +38,7 @@ resource "aws_instance" "backend" {
   }
   
   provisioner "local-exec" {
-    command = "echo ${self.public_ip} > back_ip.txt"
+    command = "echo ${self.private_ip} > back_ip.txt"
   }
 }
 
@@ -60,6 +60,6 @@ resource "aws_instance" "database" {
   }
 
   provisioner "local-exec" {
-    command = "echo ${self.public_ip} > database_ip.txt"
+    command = "echo ${self.private_ip} > database_ip.txt"
   }
 }
