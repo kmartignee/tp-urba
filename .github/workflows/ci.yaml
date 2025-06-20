@@ -62,8 +62,10 @@ jobs:
         id: get-ip
         run: |
           cd terraform
-          echo "nginx_app_ip=$(terraform output -raw nginx_app_ip)" >> $GITHUB_OUTPUT
-          echo "database_ip=$(terraform output -raw database_ip)" >> $GITHUB_OUTPUT  
+          NGINX_APP_IP=$(terraform output -raw nginx_app_ip)
+          echo "nginx_app_ip=$NGINX_APP_IP" >> $GITHUB_OUTPUT
+          DATABASE_IP=$(terraform output -raw database_ip)
+            echo "database_ip=$DATABASE_IP" >> $GITHUB_OUTPUT
   
   build-frontend:
       runs-on: ubuntu-latest

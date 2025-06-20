@@ -10,39 +10,39 @@ app.use(cors());
 
 const pool = new Pool({
     host: process.env.POSTGRES_HOST || 'localhost',
-    database: process.env.POSTGRES_DB || 'todos',
-    user: process.env.POSTGRES_USER || 'todo_user',
-    password: process.env.POSTGRES_PASSWORD || 'todo_super_secret_password',
+    database: process.env.POSTGRES_DB || 'recipes',
+    user: process.env.POSTGRES_USER || 'recipe_user',
+    password: process.env.POSTGRES_PASSWORD || 'recipe_super_secret_password',
     port: 5432
 });
 
-app.get('/todos', async (req, res) => {
-    const { rows } = await pool.query('SELECT id, title, completed FROM todos ORDER BY id');
+app.get('/recipes', async (req, res) => {
+    const { rows } = await pool.query('SELECT id, name, preparation_time, difficulty, is_favorite FROM recipes ORDER BY id');
     res.json(rows);
 });
 
-app.post('/todos', async (req, res) => {
-    const { title } = req.body;
+app.post('/recipes', async (req, res) => {
+    const { name, preparation_time, difficulty } = req.body;
     const { rows } = await pool.query(
-        'INSERT INTO todos (title, completed) VALUES ($1, $2) RETURNING *',
-        [title, false]
+        'INSERT INTO recipes (name, preparation_time, difficulty, is_favorite) VALUES ($1, $2, $3, $4) RETURNING *',
+        [name, preparation_time, difficulty, false]
     );
     res.status(201).json(rows[0]);
 });
 
-app.put('/todos/:id', async (req, res) => {
+app.put('/recipes/:id', async (req, res) => {
     const id = req.params.id;
-    const { title, completed } = req.body;
+    const { name, preparation_time, difficulty, is_favorite } = req.body;
     const { rows } = await pool.query(
-        'UPDATE todos SET title = $1, completed = $2 WHERE id = $3 RETURNING *',
-        [title, completed, id]
+        'UPDATE recipes SET name = $1, preparation_time = $2, difficulty = $3, is_favorite = $4 WHERE id = $5 RETURNING *',
+        [name, preparation_time, difficulty, is_favorite, id]
     );
     res.json(rows[0]);
 });
 
-app.delete('/todos/:id', async (req, res) => {
+app.delete('/recipes/:id', async (req, res) => {
     const id = req.params.id;
-    await pool.query('DELETE FROM todos WHERE id = $1', [id]);
+    await pool.query('DELETE FROM recipes WHERE id = $1', [id]);
     res.status(204).send();
 });
 
