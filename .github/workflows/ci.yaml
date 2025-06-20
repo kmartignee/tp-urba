@@ -24,7 +24,9 @@ jobs:
         run: checkov
   
   terraform:
+    needs: checkov
     runs-on: ubuntu-latest
+    
     outputs:
       frontend_ip: ${{ steps.terraform-output.outputs.frontend_ip }}
       backend_ip: ${{ steps.terraform-output.outputs.backend_ip }}
