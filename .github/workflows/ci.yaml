@@ -21,7 +21,7 @@ jobs:
 
       - name: Run Checkov on Terraform code
         working-directory: ./terraform
-        run: checkov
+        run: checkov --config-file ../.github/configurations/checkov.yml
   
   terraform:
     needs: checkov
