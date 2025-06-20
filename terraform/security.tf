@@ -1,7 +1,6 @@
 # Groupe de sécurité pour l'instance Nginx (front + back)
 resource "aws_security_group" "app_sg" {
   name        = "app-security-group"
-  description = "Groupe de sécurité pour le serveur Nginx (front + back)"
   vpc_id      = aws_vpc.main.id
 
   # Autoriser le trafic HTTP entrant
@@ -57,7 +56,6 @@ resource "aws_security_group" "app_sg" {
 # Groupe de sécurité pour la base de données
 resource "aws_security_group" "database_sg" {
   name        = "database-security-group"
-  description = "Groupe de sécurité pour le serveur de base de données"
   vpc_id      = aws_vpc.main.id
 
   # Autoriser le trafic MySQL/PostgreSQL uniquement depuis le serveur d'application
