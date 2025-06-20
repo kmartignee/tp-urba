@@ -54,11 +54,11 @@ jobs:
 
       - name: Plan Terraform
         working-directory: ./terraform
-        run: terraform plan -var="db_root_password=${{ secrets.DB_ROOT_PASSWORD }}" -var="db_password=${{ secrets.DB_PASSWORD }}"
+        run: terraform plan
 
       - name: Appliquer Terraform
         working-directory: ./terraform
-        run: terraform apply -auto-approve -var="db_root_password=${{ secrets.DB_ROOT_PASSWORD }}" -var="db_password=${{ secrets.DB_PASSWORD }}"
+        run: terraform apply -auto-approve
 
   ansible:
     needs: terraform
