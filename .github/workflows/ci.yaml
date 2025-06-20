@@ -57,15 +57,6 @@ jobs:
       - name: Appliquer Terraform
         working-directory: ./terraform
         run: terraform apply -auto-approve
-        
-      - name: Get IPs from Terraform outputs
-        id: get-ip
-        run: |
-          cd terraform
-          NGINX_APP_IP=$(terraform output -raw nginx_app_ip)
-          echo "nginx_app_ip=$NGINX_APP_IP" >> $GITHUB_OUTPUT
-          DATABASE_IP=$(terraform output -raw database_ip)
-            echo "database_ip=$DATABASE_IP" >> $GITHUB_OUTPUT
   
   build-frontend:
       runs-on: ubuntu-latest
